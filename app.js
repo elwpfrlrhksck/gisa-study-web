@@ -108,8 +108,27 @@ function render() {
   fit();
 }
 /* 사용자 글자 크기를 유지한다. 긴 원문과 해설은 stage 안에서 끝까지 읽는다. */
+/* 모바일 세로 풀이 화면은 스크롤 없이 한 화면에 맞춘다: 여백 줄이기 → 글자 줄이기 → 해설 두 줄로 접기(크게 보기로 전체 확인) */
 function fit() {
-  document.documentElement.style.setProperty("--fit", 1);
+  const el = document.documentElement;
+  el.style.setProperty("--fit", 1);
+  const st = document.querySelector(".stage.solve");
+  if (!st || !st.classList || typeof window.matchMedia !== "function" || !window.matchMedia("(max-width:760px)").matches) return;
+  st.classList.remove("tight", "clip", "max");
+  const over = () => st.scrollHeight > st.clientHeight + 1;
+  if (!over()) return;
+  st.classList.add("tight");
+  let f = 1;
+  while (over() && f > 0.8) {
+    f = Math.round((f - 0.04) * 100) / 100;
+    el.style.setProperty("--fit", f);
+  }
+  if (over()) st.classList.add("clip");
+  while (over() && f > 0.66) {
+    f = Math.round((f - 0.04) * 100) / 100;
+    el.style.setProperty("--fit", f);
+  }
+  if (over()) st.classList.add("max");
 }
 
 /* ---------- 홈 ---------- */

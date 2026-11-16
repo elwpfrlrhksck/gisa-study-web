@@ -205,3 +205,26 @@ select{min-width:0;min-height:44px;padding:8px 32px 8px 12px;border:1px solid va
 .cells,.cells.n8,.cells.n10{grid-template-columns:repeat(5,minmax(0,1fr))}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
+/* 모바일 세로: 풀이 화면은 스크롤하지 않는다 (app.js fit()이 tight → 글자 축소 → clip 순으로 맞춤) */
+@media(max-width:760px){
+html{font-size:calc(var(--fs) * var(--fit))}
+.stage.solve{overflow:hidden;padding:10px 1px}
+.stage.solve .textbook-evidence,.stage.solve .source{display:none}
+.stage.solve .question-card:has(.opts)+.answer-panel .ansbox{display:none}
+.stage.solve.tight .study-grid{gap:8px}
+.stage.solve.tight .question-card,.stage.solve.tight .answer-panel.revealed{padding:12px}
+.stage.solve.tight .question-meta{margin-bottom:6px}
+.stage.solve.tight .q{margin-bottom:10px;line-height:1.5}
+.stage.solve.tight .opts{gap:6px}
+.stage.solve.tight .opt{min-height:0;padding:8px 10px;line-height:1.4}
+.stage.solve.tight .answer-content{gap:6px}
+.stage.solve.tight .explain{line-height:1.5}
+.stage.solve.tight .draft-answer textarea{min-height:0;height:3.2rem}
+.stage.solve.clip .explain p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+}
+@media(max-width:760px){
+.stage.solve.max .explain p,.stage.solve.max .draft-answer .hint,.stage.solve.max .verdict{display:none}
+.stage.solve.max .draft-answer textarea{height:2.4rem}
+.stage.solve.max .question-card,.stage.solve.max .answer-panel.revealed{padding:9px}
+.stage.solve.max .opt{padding:6px 8px;line-height:1.3}.stage.solve.max .q{line-height:1.4;margin-bottom:8px}
+}
