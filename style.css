@@ -57,6 +57,23 @@ main:focus{outline:none}
 .seg button{flex:1;min-width:0;min-height:46px;padding:8px 6px;border:1px solid var(--line);background:var(--card);border-radius:10px;font-size:.87rem;font-weight:600;line-height:1.4;word-break:keep-all;overflow-wrap:anywhere}
 .seg button.on{background:var(--hl);border-color:var(--accent);color:var(--accent-ink);box-shadow:inset 0 0 0 1px var(--accent)}
 .seg-grp{flex-wrap:wrap}.seg-grp button{flex:1 0 16%;min-height:54px;font-size:.94rem}
+/* 해설에 연결한 교재 원문 */
+.textbook-evidence{margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
+.textbook-evidence h3{margin:0 0 12px;font-size:.95rem}
+.book-ref+.book-ref{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
+.book-citation{margin:0 0 10px;font-size:.86rem;line-height:1.6;overflow-wrap:anywhere}
+.book-citation small{display:block;color:var(--mute);font-size:.75rem}
+.book-summary{font-size:.87rem;line-height:1.75;margin:0 0 12px}
+.book-preview{margin-top:12px}.book-preview>.text-link{margin-top:10px}
+.book-image{position:relative;width:100%;background:#fff;overflow:hidden;border:1px solid var(--line);border-radius:6px;isolation:isolate}
+.book-image img{position:absolute;left:0;width:100%;max-width:none;display:block;object-fit:fill}
+.book-highlight{position:absolute;background:#ffe04c55;pointer-events:none;mix-blend-mode:multiply}
+.textbook-sheet{width:min(1100px,96vw)!important;max-width:1100px!important;display:flex;flex-direction:column;overflow:hidden!important}
+.textbook-sheet>h3{flex:none;margin-bottom:10px}
+.book-toolbar{display:flex;align-items:center;gap:10px;flex:none;margin-bottom:12px}
+.book-toolbar .hint{margin-right:auto}.book-toolbar .btn{flex:0 0 auto;min-height:44px;padding:8px 16px}
+.book-page-scroll{min-height:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y pinch-zoom}
+.book-full.zoomed{width:1378px;max-width:none}
 .selection-row{display:flex;align-items:center;gap:16px}
 .selection-row label{flex:none;color:var(--mute);font-size:.85rem}
 select{min-width:0;min-height:44px;padding:8px 32px 8px 12px;border:1px solid var(--line);background:var(--soft);border-radius:10px}

@@ -153,6 +153,85 @@ function startPick() {
   startSet(list.map((q) => q.id), [g, p.sub, p.subj].filter(Boolean).join(" · "));
 }
 
+/* ---------- 교재 원문: 답 확인 후, 필요한 페이지만 불러온다 ---------- */
+const textbookImages = new Map();
+function textbookHtml(q) {
+  if (!q.textbook?.length) return "";
+  return `<section class="textbook-evidence" aria-label="교재 근거"><h3>교재 근거</h3>${q.textbook.map((ref, i) => `<article class="book-ref"><p class="book-citation">${h(ref.book)} <b>${ref.page}쪽</b><small>PDF ${ref.pdfPage}쪽</small></p>${ref.summary ? `<p class="book-summary">${h(ref.summary)}</p>` : ""}<button class="text-link" data-act="textbook" data-q="${h(q.id)}" data-i="${i}" aria-expanded="false">교재 원문 보기 ${icon("book")}</button><div class="book-preview" hidden></div></article>`).join("")}</section>`;
+}
+async function textbookImage(ref) {
+  if (!/^(system|diesel)-\d{3}$/.test(ref.asset)) throw new Error("Invalid textbook asset");
+  if (!window.ENC) return `./data/textbook/pages/${ref.asset}.webp`;
+  if (!textbookKey) throw new Error("Locked");
+  if (textbookImages.has(ref.asset)) return textbookImages.get(ref.asset);
+  const pending = (async () => {
+    const response = await fetch(`./textbook/${ref.asset}.enc?v=${encodeURIComponent(window.ENC.n)}`);
+    if (!response.ok) throw new Error("Textbook unavailable");
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const decoded = await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes.slice(0, 12), additionalData: new TextEncoder().encode(ref.asset) }, textbookKey, bytes.slice(12));
+    return URL.createObjectURL(new Blob([decoded], { type: "image/webp" }));
+  })();
+  textbookImages.set(ref.asset, pending);
+  try {
+    const url = await pending;
+    // 오래 학습해도 교재 이미지 전체가 메모리에 쌓이지 않도록 제한한다.
+    while (textbookImages.size > 8) {
+      const oldest = textbookImages.keys().next().value;
+      textbookImages.get(oldest).then((value) => URL.revokeObjectURL(value), () => {});
+      textbookImages.delete(oldest);
+    }
+    return url;
+  } catch (error) {
+    textbookImages.delete(ref.asset);
+    throw error;
+  }
+}
+function textbookFigure(ref, url, full = false) {
+  const [lo, hi] = full ? [0, 1] : ref.crop;
+  const span = hi - lo;
+  const marks = (ref.marks || []).map(([x, y, w, height]) => `<span class="book-highlight" style="left:${x * 100}%;top:${(y - lo) / span * 100}%;width:${w * 100}%;height:${height / span * 100}%"></span>`).join("");
+  return `<div class="book-image ${full ? "book-full" : "book-crop"}" style="aspect-ratio:${ref.width}/${ref.height * span}"><img src="${h(url)}" alt="${h(ref.book)} ${ref.page}쪽 원문" style="top:${-lo / span * 100}%;height:${100 / span}%" decoding="async">${marks}</div>`;
+}
+async function openTextbook(button) {
+  const q = BY_ID[button.dataset.q], index = +button.dataset.i;
+  const ref = q?.textbook?.[index];
+  if (!ref || !S || S.ans[q.id] === undefined) return;
+  const preview = button.closest(".book-ref").querySelector(".book-preview");
+  if (!preview.hidden) {
+    preview.hidden = true;
+    button.setAttribute("aria-expanded", "false");
+    button.innerHTML = `교재 원문 보기 ${icon("book")}`;
+    return;
+  }
+  preview.hidden = false;
+  preview.innerHTML = '<p class="hint" role="status">교재를 불러오는 중…</p>';
+  button.disabled = true;
+  button.setAttribute("aria-expanded", "true");
+  try {
+    const url = await textbookImage(ref);
+    if (!preview.isConnected) return;
+    preview.innerHTML = `${textbookFigure(ref, url)}<button class="text-link" data-act="textbook-full" data-q="${h(q.id)}" data-i="${index}">페이지 전체 · 확대</button>`;
+    button.innerHTML = "교재 접기";
+  } catch (error) {
+    if (preview.isConnected) {
+      preview.innerHTML = '<p class="hint" role="alert">교재를 불러오지 못했습니다. 연결을 확인한 뒤 다시 열어 주세요.</p>';
+      button.innerHTML = "교재 닫기 · 다시 시도";
+    }
+  } finally {
+    button.disabled = false;
+  }
+}
+async function fullTextbook(button) {
+  const q = BY_ID[button.dataset.q], ref = q?.textbook?.[+button.dataset.i];
+  if (!ref || !S || S.ans[q.id] === undefined) return;
+  try {
+    const url = await textbookImage(ref);
+    if (!button.isConnected) return;
+    sheet(`<h3>${h(ref.book)} · ${ref.page}쪽</h3><div class="book-toolbar"><span class="hint">PDF ${ref.pdfPage}쪽</span><button class="text-link" data-act="book-zoom" aria-pressed="false">확대</button><button class="btn" data-act="close">닫기</button></div><div class="book-page-scroll" tabindex="0" aria-label="교재 원문 스크롤">${textbookFigure(ref, url, true)}</div>`);
+    document.querySelector(".sheet")?.classList.add("textbook-sheet");
+  } catch (error) { toast("교재를 다시 열어 주세요."); }
+}
+
 /* ---------- 풀이: 고르면 바로 정답·해설 ---------- */
 function solve() {
   const q = BY_ID[S.ids[S.i]];
@@ -184,7 +263,7 @@ function solve() {
   <main id="app" tabindex="-1" class="stage solve"><div class="study-grid"><section class="question-card" aria-labelledby="question-title">
     <div class="question-meta"><span class="badge">${h(q.subject)}</span>${q.level ? `<span class="badge subtle">난도 ${h(q.level)}</span>` : ""}${q.conf === "추정" ? '<span class="badge caution">정답 추정</span>' : ""}<span class="meta">${h(q.exam)}${q.no ? " · " + q.no + "번" : ""}</span></div>
     <h1 class="q" id="question-title">${h(q.q)}</h1>${body}
-  </section><aside class="answer-panel ${reveal ? "revealed" : ""}" aria-label="정답과 해설">${ex}</aside></div></main>
+  </section><aside class="answer-panel ${reveal ? "revealed" : ""}" aria-label="정답과 해설">${ex}${reveal ? textbookHtml(q) : ""}</aside></div></main>
   <footer class="foot"><span class="keyboard-hint">${isShort(q) ? "답을 적고 정답과 비교해 보세요" : "숫자 1–5로 선택 · 방향키로 이동"}</span><div class="foot-actions">${foot}</div></footer></div>`;
 }
 function pick(i) {
@@ -283,7 +362,14 @@ document.addEventListener("click", (e) => {
     render();
   } else if (act === "more") {
     const q = BY_ID[S.ids[S.i]];
-    sheet(`<h3>해설</h3><p class="full">${q.explain ? h(q.explain) : "해설이 없는 문제입니다."}</p>${q.src ? `<p class="hint">근거: ${h(q.src)}</p>` : ""}<button class="btn pri" data-act="close">닫기</button>`);
+    sheet(`<h3>해설</h3><p class="full">${q.explain ? h(q.explain) : "해설이 없는 문제입니다."}</p>${q.src ? `<p class="hint">근거: ${h(q.src)}</p>` : ""}${textbookHtml(q)}<button class="btn pri" data-act="close">닫기</button>`);
+  } else if (act === "textbook") { openTextbook(t);
+  } else if (act === "textbook-full") { fullTextbook(t);
+  } else if (act === "book-zoom") {
+    const page = document.querySelector(".textbook-sheet .book-full");
+    const zoomed = page?.classList.toggle("zoomed");
+    t.setAttribute("aria-pressed", String(!!zoomed));
+    t.textContent = zoomed ? "화면에 맞춤" : "확대";
   } else if (act === "list") {
     const cells = S.ids.map((id, i) => `<button class="${S.ans[id] !== undefined ? "sel" : ""} ${i === S.i ? "cur" : ""}" data-act="jump" data-i="${i}">${i + 1}</button>`).join("");
     sheet(`<h3>문제 번호로 이동</h3><p class="hint">색이 채워진 번호는 답을 확인한 문제입니다.</p><div class="cells n${S.ids.length > 60 ? 10 : S.ids.length > 30 ? 8 : 6}">${cells}</div><button class="btn pri" data-act="close">닫기</button>`);
@@ -373,13 +459,16 @@ if (typeof window !== "undefined" && window.addEventListener) window.addEventLis
 
 /* ---------- 시작: 평문 데이터 또는 비밀번호 잠금 해제 ---------- */
 const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+let textbookKey = null;
 async function decrypt(pw) {
   const enc = window.ENC;
   const km = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
   const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64(enc.s), iterations: enc.i, hash: "SHA-256" }, km, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
   const buf = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(enc.n) }, key, b64(enc.c));
   const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"));
-  return JSON.parse(await new Response(stream).text());
+  const data = JSON.parse(await new Response(stream).text());
+  textbookKey = key;
+  return data;
 }
 function start(data) {
   BANK = Array.isArray(data) ? data : data.bank;
