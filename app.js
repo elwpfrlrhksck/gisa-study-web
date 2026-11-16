@@ -10,7 +10,7 @@ const MARKS = ["①", "②", "③", "④", "⑤"];
 const root = document.getElementById("root");
 const GROUPS = [
   ["past", "기출"],
-  ["books", "문제집"],
+  ["books", "이론"],
   ["rule", "규정 300"],
   ["safe", "안전 100"],
   ["short", "주관식"],
