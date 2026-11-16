@@ -228,3 +228,7 @@ html{font-size:calc(var(--fs) * var(--fit))}
 .stage.solve.max .question-card,.stage.solve.max .answer-panel.revealed{padding:9px}
 .stage.solve.max .opt{padding:6px 8px;line-height:1.3}.stage.solve.max .q{line-height:1.4;margin-bottom:8px}
 }
+/* 비밀번호 저장 */
+.lock .remember{display:flex;align-items:center;gap:8px;font-weight:500;font-size:.85rem;cursor:pointer}
+.lock .remember input{width:20px;min-height:20px;height:20px;margin:0;accent-color:var(--accent)}
+.bar .brand,.bar .link{white-space:nowrap;flex:none}.bar .brand{margin-right:auto}

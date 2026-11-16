@@ -147,7 +147,7 @@ function home() {
   const n = p.n ? Math.min(p.n, pool.length) : pool.length;
   const resume = S ? `<button class="resume" data-act="resume"><span class="resume-copy"><b>이어서 풀기</b><small>${h(S.title)} · ${Math.min(S.i + 1, S.ids.length)} / ${S.ids.length}</small></span>${icon("arrow")}</button>` : "";
   root.innerHTML = `<div class="app app-home">
-  <header class="bar"><a class="brand" href="#" data-act="home">${icon("train")}<span>기관사 <b>공부방</b></span></a><button class="link" data-act="theory" ${THEORY.length ? "" : "hidden"}>${icon("book")}이론 보기</button></header>
+  <header class="bar"><a class="brand" href="#" data-act="home">${icon("train")}<span>기관사 <b>공부방</b></span></a><button class="link" data-act="theory" ${THEORY.length ? "" : "hidden"}>${icon("book")}이론 보기</button>${window.ENC && savedPw() ? `<button class="link" data-act="lock" aria-label="저장된 비밀번호 지우고 잠그기">${icon("lock")}잠그기</button>` : ""}</header>
   <main id="app" tabindex="-1" class="stage home">
     ${resume}
     <section class="setup-card"><h2>문제 선택</h2>${seg("grp", p.grp, GROUPS)}
@@ -366,6 +366,7 @@ document.addEventListener("click", (e) => {
   } else if (act === "start" || act === "fresh") startPick();
   else if (act === "resume") go(S.i >= S.ids.length ? "end" : "solve");
   else if (act === "theory") go("theory");
+  else if (act === "lock") lockApp();
   else if (act === "home") go("home");
   else if (act === "homeEnd") {
     S = null;
@@ -499,9 +500,33 @@ function start(data) {
   document.documentElement.style.setProperty("--fs", DB.fs + "px");
   go("home");
 }
+/* 비밀번호 저장: 이 기기 브라우저에만 남는다. 홈의 '잠그기'로 지운다. */
+const PW_KEY = "gisa-study.pw";
+function savePw(pw) {
+  try { pw ? localStorage.setItem(PW_KEY, pw) : localStorage.removeItem(PW_KEY); } catch (e) {}
+}
+function savedPw() {
+  try { return localStorage.getItem(PW_KEY) || ""; } catch (e) { return ""; }
+}
+function lockApp() {
+  savePw("");
+  location.reload();
+}
+async function autoUnlock() {
+  const pw = savedPw();
+  if (!pw || !window.crypto || !window.crypto.subtle || typeof DecompressionStream === "undefined") return lockScreen();
+  root.innerHTML = '<p class="empty">공부방을 여는 중입니다…</p>';
+  try {
+    start(await decrypt(pw));
+  } catch (e) {
+    savePw("");
+    lockScreen();
+  }
+}
 function lockScreen() {
   root.innerHTML = `<div class="app"><main id="app" tabindex="-1" class="stage lock"><div class="lock-card"><span class="lock-mark">${icon("train")}</span><h1>기관사 <b>공부방</b></h1>
   <form id="lf"><label for="pw">입장 비밀번호</label><input id="pw" type="password" autocomplete="off" placeholder="공유받은 비밀번호를 입력하세요" required autofocus aria-describedby="err">
+  <label class="remember"><input id="keep" type="checkbox" checked> 이 기기에 비밀번호 저장</label>
   <p class="err" id="err" role="alert"></p><button class="go" id="unlock" type="submit">공부방 들어가기 ${icon("arrow")}</button></form></div></main></div>`;
   document.getElementById("lf").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -516,6 +541,7 @@ function lockScreen() {
     button.textContent = "확인 중…";
     try {
       const data = await decrypt(field.value);
+      savePw(document.getElementById("keep").checked ? field.value : "");
       field.value = "";
       start(data);
     } catch (errorDetail) {
@@ -535,7 +561,7 @@ function lockScreen() {
   const m = document.createElement("div");
   m.id = "modal";
   document.body.append(t, m);
-  if (window.ENC) lockScreen();
+  if (window.ENC) autoUnlock();
   else if (window.BANK && window.BANK.length) start(window.BANK);
   else root.innerHTML = '<div class="app"><main class="stage lock"><h1>문제를 불러오지 못했어요</h1><button class="go" onclick="location.reload()">다시 불러오기</button></main></div>';
 })();
