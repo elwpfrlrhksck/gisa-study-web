@@ -84,10 +84,14 @@ function closeSheet() {
 function subsOf(grp) {
   return uniq(BANK.filter((q) => q.grp === grp).map((q) => q.sub));
 }
+/* 기출만 과목을 '기술'과 '규정·안전' 둘로 나눈다. */
+function subjOf(q) {
+  return q.grp === "past" && q.subject !== "기술" ? "규정·안전" : q.subject;
+}
 function poolOf(p) {
   let list = BANK.filter((q) => q.grp === p.grp);
   if (p.sub) list = list.filter((q) => q.sub === p.sub);
-  if (p.subj) list = list.filter((q) => q.subject === p.subj);
+  if (p.subj) list = list.filter((q) => subjOf(q) === p.subj);
   return list;
 }
 
@@ -141,7 +145,7 @@ function home() {
   if (!GROUPS.some((g) => g[0] === p.grp)) p.grp = "past";
   const subs = subsOf(p.grp);
   if (p.sub && !subs.includes(p.sub)) p.sub = "";
-  const subjects = uniq(BANK.filter((q) => q.grp === p.grp && (!p.sub || q.sub === p.sub)).map((q) => q.subject));
+  const subjects = uniq(BANK.filter((q) => q.grp === p.grp && (!p.sub || q.sub === p.sub)).map(subjOf)).sort((a, b) => (a === "기술") - (b === "기술") || 0);
   if (p.subj && !subjects.includes(p.subj)) p.subj = "";
   const pool = poolOf(p);
   const n = p.n ? Math.min(p.n, pool.length) : pool.length;
@@ -553,6 +557,17 @@ function lockScreen() {
     }
   });
 }
+/* 휴대폰이 예전 화면을 붙잡고 있으면 새 버전으로 한 번 다시 연다. */
+async function checkUpdate() {
+  try {
+    const me = document.querySelector('script[src*="app.js?v="]');
+    const mine = me && (me.getAttribute("src").split("v=")[1] || "");
+    if (!mine || location.protocol === "file:") return;
+    const html = await (await fetch("./index.html?t=" + Date.now(), { cache: "no-store" })).text();
+    const m = html.match(/app\.js\?v=([\w-]+)/);
+    if (m && m[1] !== mine && !location.search.includes("u=" + m[1])) location.replace("./?u=" + m[1]);
+  } catch (e) {}
+}
 (function boot() {
   const t = document.createElement("div");
   t.id = "toast";
@@ -561,6 +576,7 @@ function lockScreen() {
   const m = document.createElement("div");
   m.id = "modal";
   document.body.append(t, m);
+  checkUpdate();
   if (window.ENC) autoUnlock();
   else if (window.BANK && window.BANK.length) start(window.BANK);
   else root.innerHTML = '<div class="app"><main class="stage lock"><h1>문제를 불러오지 못했어요</h1><button class="go" onclick="location.reload()">다시 불러오기</button></main></div>';
