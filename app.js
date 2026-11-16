@@ -129,13 +129,12 @@ function home() {
   root.innerHTML = `<div class="app app-home">
   <header class="bar"><a class="brand" href="#" data-act="home">${icon("train")}<span>기관사 <b>공부방</b></span></a><button class="link" data-act="theory" ${THEORY.length ? "" : "hidden"}>${icon("book")}이론 보기</button></header>
   <main id="app" tabindex="-1" class="stage home">
-    <div class="home-intro"><p class="eyebrow">나의 기관사 시험 준비</p><h1>오늘도, 한 문제씩.</h1><p>풀고 싶은 문제를 골라 바로 시작하세요.</p></div>
     ${resume}
-    <section class="setup-card"><h2><span class="step">1</span>무엇을 풀까요?</h2>${seg("grp", p.grp, GROUPS)}
+    <section class="setup-card"><h2>문제 선택</h2>${seg("grp", p.grp, GROUPS)}
       <div class="selection-row"><label for="sub-select">${p.grp === "past" ? "시험 회차" : p.grp === "short" ? "학습 범위" : "난이도"}</label><select id="sub-select" data-pick="sub">${[["", "전체"]].concat(subs.map((s) => [s, s])).map(([v, l]) => `<option value="${h(v)}" ${p.sub === v ? "selected" : ""}>${h(l)}</option>`).join("")}</select></div>
       ${subjects.length > 1 ? `<div class="subject-pick"><p class="field-label">과목</p>${seg("subj", p.subj, [["", "전 과목"]].concat(subjects.map((s) => [s, s])))}</div>` : ""}
     </section>
-    <section class="setup-card"><h2><span class="step">2</span>얼마나 풀까요?</h2><div class="session-settings"><div><p class="field-label">문제 수</p>${seg("n", p.n, [[10, "10문제"], [20, "20문제"], [50, "50문제"], [0, "전체"]])}</div><div><p class="field-label">문제 순서</p>${seg("rand", p.rand ? 1 : 0, [[0, "차례로"], [1, "섞어서"]])}</div></div></section>
+    <section class="setup-card"><h2>풀이 설정</h2><div class="session-settings"><div><p class="field-label">문제 수</p>${seg("n", p.n, [[10, "10문제"], [20, "20문제"], [50, "50문제"], [0, "전체"]])}</div><div><p class="field-label">문제 순서</p>${seg("rand", p.rand ? 1 : 0, [[0, "차례로"], [1, "섞어서"]])}</div></div></section>
   </main><footer class="home-foot"><p class="selection-summary">${h(p.sub || GROUPS.find((g) => g[0] === p.grp)[1])}${p.subj ? " · " + h(p.subj) : ""}<span>선택 가능한 문제 ${pool.length}개</span></p><button class="go" data-act="start" ${n ? "" : "disabled"}>${n ? `${n}문제 풀기` : "해당 문제가 없습니다"}${icon("arrow")}</button></footer></div>`;
 }
 function startSet(ids, title) {
@@ -208,7 +207,7 @@ function end() {
   root.innerHTML = `<div class="app">
   <header class="bar"><h1>${h(S.title)}</h1></header>
   <main id="app" tabindex="-1" class="stage end">
-    <span class="end-mark">${icon("check")}</span><p class="eyebrow">한 번 더, 차근차근</p><h1 class="done">학습을 마쳤어요.</h1><p class="hint">같은 문제를 다시 풀거나 새로운 문제를 골라 보세요.</p>
+    <span class="end-mark">${icon("check")}</span><h1 class="done">학습을 마쳤어요.</h1>
     <button class="go" data-act="again">같은 문제 다시 풀기</button>
     <button class="go alt" data-act="fresh">같은 조건으로 새 문제</button>
     <button class="go alt" data-act="homeEnd">다른 문제 고르기</button>
@@ -392,7 +391,7 @@ function start(data) {
   go("home");
 }
 function lockScreen() {
-  root.innerHTML = `<div class="app"><main id="app" tabindex="-1" class="stage lock"><div class="lock-card"><span class="lock-mark">${icon("train")}</span><p class="eyebrow">나의 기관사 시험 준비</p><h1>기관사 <b>공부방</b></h1><p class="hint">한 문제씩 풀고, 차근차근 익혀보세요.</p>
+  root.innerHTML = `<div class="app"><main id="app" tabindex="-1" class="stage lock"><div class="lock-card"><span class="lock-mark">${icon("train")}</span><h1>기관사 <b>공부방</b></h1>
   <form id="lf"><label for="pw">입장 비밀번호</label><input id="pw" type="password" autocomplete="off" placeholder="공유받은 비밀번호를 입력하세요" required autofocus aria-describedby="err">
   <p class="err" id="err" role="alert"></p><button class="go" id="unlock" type="submit">공부방 들어가기 ${icon("arrow")}</button></form></div></main></div>`;
   document.getElementById("lf").addEventListener("submit", async (e) => {
