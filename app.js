@@ -10,6 +10,7 @@ const MARKS = ["①", "②", "③", "④", "⑤"];
 const root = document.getElementById("root");
 const GROUPS = [
   ["past", "기출"],
+  ["books", "문제집"],
   ["rule", "규정 300"],
   ["safe", "안전 100"],
   ["short", "주관식"],
@@ -131,7 +132,7 @@ function home() {
   <main id="app" tabindex="-1" class="stage home">
     ${resume}
     <section class="setup-card"><h2>문제 선택</h2>${seg("grp", p.grp, GROUPS)}
-      <div class="selection-row"><label for="sub-select">${p.grp === "past" ? "시험 회차" : p.grp === "short" ? "학습 범위" : "난이도"}</label><select id="sub-select" data-pick="sub">${[["", "전체"]].concat(subs.map((s) => [s, s])).map(([v, l]) => `<option value="${h(v)}" ${p.sub === v ? "selected" : ""}>${h(l)}</option>`).join("")}</select></div>
+      <div class="selection-row"><label for="sub-select">${p.grp === "past" ? "시험 회차" : p.grp === "books" ? "자료 선택" : p.grp === "short" ? "학습 범위" : "난이도"}</label><select id="sub-select" data-pick="sub">${[["", "전체"]].concat(subs.map((s) => [s, s])).map(([v, l]) => `<option value="${h(v)}" ${p.sub === v ? "selected" : ""}>${h(l)}</option>`).join("")}</select></div>
       ${subjects.length > 1 ? `<div class="subject-pick"><p class="field-label">과목</p>${seg("subj", p.subj, [["", "전 과목"]].concat(subjects.map((s) => [s, s])))}</div>` : ""}
     </section>
     <section class="setup-card"><h2>풀이 설정</h2><div class="session-settings"><div><p class="field-label">문제 수</p>${seg("n", p.n, [[10, "10문제"], [20, "20문제"], [50, "50문제"], [0, "전체"]])}</div><div><p class="field-label">문제 순서</p>${seg("rand", p.rand ? 1 : 0, [[0, "차례로"], [1, "섞어서"]])}</div></div></section>
