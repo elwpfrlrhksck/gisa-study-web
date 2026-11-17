@@ -275,3 +275,7 @@ html{font-size:calc(var(--fs) * var(--fit))}
 .home:not(.learn-home) .session-settings{gap:8px}
 .home .resume{min-height:44px}.home .resume small{display:inline;margin-left:8px}
 }
+/* 원문 창: 쪽을 틈 없이 이어 붙인다 */
+.source-pages{display:flex;flex-direction:column;gap:0}
+.source-pages .book-image{border-radius:0;border-left:0;border-right:0;border-top:0}
+.source-pages .book-image:first-child{border-top:1px solid var(--line)}

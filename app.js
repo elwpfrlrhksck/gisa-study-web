@@ -328,6 +328,21 @@ async function openTextbook(button) {
     button.disabled = false;
   }
 }
+/* 원문 창: 조문이 걸친 쪽을 제목·버튼 없이 위에서 아래로 이어 붙여 보여 준다. */
+async function openSource(q) {
+  const refs = q.textbook || [];
+  if (!refs.length) return;
+  const names = [...new Set(refs.map((r) => `${r.book}${r.label ? " " + r.label : ""}`))].join(" · ");
+  sheet(`<h3>${h(names)}</h3><div class="source-pages"><p class="hint" role="status">원문을 불러오는 중…</p></div><button class="btn pri" data-act="close">닫기</button>`);
+  const box = document.querySelector(".sheet .source-pages");
+  try {
+    const urls = await Promise.all(refs.map((r) => textbookImage(r)));
+    if (!box.isConnected) return;
+    box.innerHTML = refs.map((r, i) => textbookFigure(r, urls[i])).join("");
+  } catch (error) {
+    if (box.isConnected) box.innerHTML = '<p class="hint" role="alert">원문을 불러오지 못했습니다. 인터넷 연결을 확인하고, 계속 안 되면 화면을 새로고침해 주세요.</p>';
+  }
+}
 async function fullTextbook(button) {
   const q = BY_ID[button.dataset.q], ref = q?.textbook?.[+button.dataset.i];
   if (!ref || !S || S.ans[q.id] === undefined) return;
@@ -510,10 +525,7 @@ document.addEventListener("click", (e) => {
     const q = BY_ID[S.ids[S.i]];
     sheet(`<h3>해설</h3><p class="full">${q.explain ? h(q.explain) : "해설이 없는 문제입니다."}</p>${q.src ? `<p class="hint">근거: ${h(q.src)}</p>` : ""}${textbookHtml(q)}<button class="btn pri" data-act="close">닫기</button>`);
   } else if (act === "source") {
-    const q = BY_ID[S.ids[S.i]];
-    sheet(`<h3>원문</h3>${textbookHtml(q)}<button class="btn pri" data-act="close">닫기</button>`);
-    // 여러 쪽에 걸친 조문은 모든 쪽을 펼친 채로 이어서 보여 준다.
-    document.querySelectorAll(".sheet [data-act=textbook]").forEach((b) => openTextbook(b));
+    openSource(BY_ID[S.ids[S.i]]);
   } else if (act === "tutor") {
     tutorSheet(BY_ID[S.ids[S.i]]);
   } else if (act === "textbook") { openTextbook(t);
