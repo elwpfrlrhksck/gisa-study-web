@@ -512,8 +512,8 @@ document.addEventListener("click", (e) => {
   } else if (act === "source") {
     const q = BY_ID[S.ids[S.i]];
     sheet(`<h3>원문</h3>${textbookHtml(q)}<button class="btn pri" data-act="close">닫기</button>`);
-    const first = document.querySelector(".sheet [data-act=textbook]");
-    if (first) openTextbook(first);
+    // 여러 쪽에 걸친 조문은 모든 쪽을 펼친 채로 이어서 보여 준다.
+    document.querySelectorAll(".sheet [data-act=textbook]").forEach((b) => openTextbook(b));
   } else if (act === "tutor") {
     tutorSheet(BY_ID[S.ids[S.i]]);
   } else if (act === "textbook") { openTextbook(t);
