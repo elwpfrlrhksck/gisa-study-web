@@ -138,6 +138,19 @@ function render() {
   else if (view === "theory") theory();
   else home();
   fit();
+  fitTheory();
+}
+/* 모바일에서 요약·이론 한 쪽이 스크롤 없이 들어오도록 글자를 줄인다. */
+function fitTheory() {
+  const st = document.querySelector(".stage.theory");
+  if (!st || typeof window.matchMedia !== "function" || !window.matchMedia("(max-width:760px)").matches) return;
+  const el = document.documentElement;
+  let f = 1;
+  el.style.setProperty("--fit", f);
+  while (st.scrollHeight > st.clientHeight + 1 && f > 0.7) {
+    f = Math.round((f - 0.03) * 100) / 100;
+    el.style.setProperty("--fit", f);
+  }
 }
 /* 사용자 글자 크기를 유지한다. 긴 원문과 해설은 stage 안에서 끝까지 읽는다. */
 /* 모바일 세로 풀이 화면은 스크롤 없이 한 화면에 맞춘다: 여백 줄이기 → 글자 줄이기 → 해설 두 줄로 접기(크게 보기로 전체 확인) */

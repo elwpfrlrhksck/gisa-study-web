@@ -279,3 +279,12 @@ html{font-size:calc(var(--fs) * var(--fit))}
 .source-pages{display:flex;flex-direction:column;gap:0}
 .source-pages .book-image{border-radius:0;border-left:0;border-right:0;border-top:0}
 .source-pages .book-image:first-child{border-top:1px solid var(--line)}
+/* 모바일 요약·이론: 한 쪽을 한 화면에 */
+@media(max-width:760px){
+.stage.theory{padding:8px 1px;overflow:hidden}
+.theory .sel3{grid-template-columns:1fr 1fr;gap:6px}
+.theory .sel3 select{min-height:40px;font-size:.8rem;padding:6px 8px}
+.theory .sel3 select:nth-child(3){grid-column:1 / -1}
+.theory h2{display:none}
+.theory ul{margin:10px 0 0;padding:12px 12px 12px 28px;gap:9px;line-height:1.55;font-size:.95rem}
+}
