@@ -69,7 +69,9 @@ let sheetTrigger = null;
 function sheet(html) {
   if (!document.getElementById("modal").innerHTML) sheetTrigger = document.activeElement;
   document.getElementById("modal").innerHTML = `<div class="shade" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">${html.replace("<h3>", '<h3 id="sheet-title">')}</div></div>`;
-  document.querySelector(".sheet button, .sheet select, .sheet input")?.focus();
+  document.querySelector(".sheet button, .sheet select, .sheet input")?.focus({ preventScroll: true });
+  const box = document.querySelector(".sheet");
+  if (box) box.scrollTop = 0;
 }
 function closeSheet() {
   const m = document.getElementById("modal");
@@ -274,7 +276,7 @@ function solve() {
       .join("")}</div>`;
   }
   const answer = isShort(q) ? q.a : q.choices[q.answer - 1];
-  const ex = reveal ? `<div class="answer-content"><p class="verdict ${isShort(q) || a === q.answer ? "ok" : "bad"}" tabindex="-1" role="status">${isShort(q) ? "모범답안을 확인하세요" : a === q.answer ? "정답입니다" : "오답 · 정답은 " + MARKS[q.answer - 1]}</p><div class="ansbox"><span class="answer-label">${isShort(q) ? "모범답안" : "정답 " + MARKS[q.answer - 1]}</span><p>${h(answer)}</p></div><div class="explain"><div class="explain-heading"><b>해설</b><button class="text-link" data-act="more">크게 보기 ${icon("arrow")}</button></div><p>${q.explain ? h(q.explain) : "해설이 없는 문제입니다."}</p></div>${q.src ? `<p class="source">근거 · ${h(q.src)}</p>` : ""}</div>` : `<div class="answer-placeholder">${icon("book")}<h2>정답과 해설</h2><p>${isShort(q) ? "답을 생각한 뒤 아래의<br>‘정답 보기’를 눌러 주세요." : "보기를 선택하면<br>정답과 해설이 여기에 나타납니다."}</p></div>`;
+  const ex = reveal ? `<div class="answer-content"><p class="verdict ${isShort(q) || a === q.answer ? "ok" : "bad"}" tabindex="-1" role="status">${isShort(q) ? "모범답안을 확인하세요" : a === q.answer ? "정답입니다" : "오답 · 정답은 " + MARKS[q.answer - 1]}</p><div class="ansbox"><span class="answer-label">${isShort(q) ? "모범답안" : "정답 " + MARKS[q.answer - 1]}</span><p>${h(answer)}</p></div><div class="explain"><div class="explain-heading"><b>해설</b><span class="explain-links">${q.tutor ? `<button class="text-link tutor-link" data-act="tutor">과외식 해설</button>` : ""}<button class="text-link" data-act="more">크게 보기 ${icon("arrow")}</button></span></div><p>${q.explain ? h(q.explain) : "해설이 없는 문제입니다."}</p></div>${q.src ? `<p class="source">근거 · ${h(q.src)}</p>` : ""}</div>` : `<div class="answer-placeholder">${icon("book")}<h2>정답과 해설</h2><p>${isShort(q) ? "답을 생각한 뒤 아래의<br>‘정답 보기’를 눌러 주세요." : "보기를 선택하면<br>정답과 해설이 여기에 나타납니다."}</p></div>`;
   const nextBtn = `<button class="btn pri wide" data-act="next">${last ? "학습 마치기" : "다음 문제"}${icon("arrow")}</button>`;
   const prevBtn = `<button class="btn" data-act="prev" ${S.i ? "" : "disabled"}>${icon("back")}이전</button>`;
   const foot = isShort(q) && !reveal ? `${prevBtn}<button class="btn pri wide" data-act="show">정답 보기 ${icon("check")}</button>` : `${prevBtn}${nextBtn}`;
@@ -387,6 +389,9 @@ document.addEventListener("click", (e) => {
   } else if (act === "more") {
     const q = BY_ID[S.ids[S.i]];
     sheet(`<h3>해설</h3><p class="full">${q.explain ? h(q.explain) : "해설이 없는 문제입니다."}</p>${q.src ? `<p class="hint">근거: ${h(q.src)}</p>` : ""}${textbookHtml(q)}<button class="btn pri" data-act="close">닫기</button>`);
+  } else if (act === "tutor") {
+    const q = BY_ID[S.ids[S.i]];
+    sheet(`<h3>과외식 해설</h3><p class="full tutor">${h(q.tutor)}</p><h3 class="sub-h">간단 해설</h3><p class="full">${h(q.explain)}</p>${q.src ? `<p class="hint">근거: ${h(q.src)}</p>` : ""}<button class="btn pri" data-act="close">닫기</button>`);
   } else if (act === "textbook") { openTextbook(t);
   } else if (act === "textbook-full") { fullTextbook(t);
   } else if (act === "book-zoom") {

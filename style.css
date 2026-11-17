@@ -232,3 +232,7 @@ html{font-size:calc(var(--fs) * var(--fit))}
 .lock .remember{display:flex;align-items:center;gap:8px;font-weight:500;font-size:.85rem;cursor:pointer}
 .lock .remember input{width:20px;min-height:20px;height:20px;margin:0;accent-color:var(--accent)}
 .bar .brand,.bar .link{white-space:nowrap;flex:none}.bar .brand{margin-right:auto}
+/* 과외식 해설 */
+.explain-links{display:inline-flex;align-items:center;gap:12px;flex:none}
+.tutor-link{min-height:32px;padding:4px 12px;border:1px solid var(--accent);border-radius:999px;background:var(--hl);color:var(--accent-ink);font-weight:700;white-space:nowrap}
+.sheet .sub-h{margin-top:6px;padding-top:14px;border-top:1px solid var(--line);font-size:.95rem;color:var(--mute)}
