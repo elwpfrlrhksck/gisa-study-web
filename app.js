@@ -112,9 +112,9 @@ function closeSheet() {
 function subsOf(grp) {
   return uniq(BANK.filter((q) => q.grp === grp).map((q) => q.sub));
 }
-/* 기출만 과목을 '기술'과 '규정·안전' 둘로 나눈다. */
+/* 과목: 기출은 규정 / 안전 / 기술로 나눠 고른다. */
 function subjOf(q) {
-  return q.grp === "past" && q.subject !== "기술" ? "규정·안전" : q.subject;
+  return q.subject;
 }
 function poolOf(p) {
   let list = BANK.filter((q) => q.grp === p.grp);
@@ -227,7 +227,7 @@ function home() {
   if (!GROUPS.some((g) => g[0] === p.grp)) p.grp = "past";
   const subs = subsOf(p.grp);
   if (p.sub && !subs.includes(p.sub)) p.sub = "";
-  const subjects = uniq(BANK.filter((q) => q.grp === p.grp && (!p.sub || q.sub === p.sub)).map(subjOf)).sort((a, b) => (a === "기술") - (b === "기술") || 0);
+  const subjects = uniq(BANK.filter((q) => q.grp === p.grp && (!p.sub || q.sub === p.sub)).map(subjOf)).sort((a, b) => ["규정", "안전", "기술"].indexOf(a) - ["규정", "안전", "기술"].indexOf(b));
   if (p.subj && !subjects.includes(p.subj)) p.subj = "";
   const pool = poolOf(p);
   const n = p.n ? Math.min(p.n, pool.length) : pool.length;
