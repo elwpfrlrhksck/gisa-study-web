@@ -236,3 +236,12 @@ html{font-size:calc(var(--fs) * var(--fit))}
 .explain-links{display:inline-flex;align-items:center;gap:12px;flex:none}
 .tutor-link{min-height:32px;padding:4px 12px;border:1px solid var(--accent);border-radius:999px;background:var(--hl);color:var(--accent-ink);font-weight:700;white-space:nowrap}
 .sheet .sub-h{margin-top:6px;padding-top:14px;border-top:1px solid var(--line);font-size:.95rem;color:var(--mute)}
+.tutor{display:flex;flex-direction:column;gap:8px;line-height:1.75;overflow-wrap:anywhere}
+.tutor p{margin:0}.tutor .choice-line{padding-left:1.5em;text-indent:-1.5em}
+.tutor h4{margin:12px 0 0;padding:6px 10px;border-left:4px solid var(--accent);background:var(--soft);border-radius:6px;font-size:.95rem}
+.tutor h4:first-child{margin-top:0}
+.tutor-table{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.tutor-table table{width:100%;border-collapse:collapse;font-size:.84rem;line-height:1.45}
+.tutor-table th,.tutor-table td{padding:7px 8px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);text-align:left;vertical-align:top}
+.tutor-table th{background:var(--soft);font-weight:700;white-space:nowrap}
+.tutor-table tr:last-child td{border-bottom:0}.tutor-table th:last-child,.tutor-table td:last-child{border-right:0}

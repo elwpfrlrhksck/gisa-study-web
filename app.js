@@ -66,6 +66,31 @@ function toast(msg) {
   toastTimer = setTimeout(() => (t.hidden = true), 1800);
 }
 let sheetTrigger = null;
+/* 과외식 해설: "## 제목", "|칸|칸|" 표, 그 밖은 문단 */
+function tutorHtml(text) {
+  const out = [];
+  let rows = [];
+  const flush = () => {
+    if (!rows.length) return;
+    const [head, ...body] = rows;
+    out.push(`<div class="tutor-table"><table><thead><tr>${head.map((c) => `<th>${h(c)}</th>`).join("")}</tr></thead><tbody>${body.map((r) => `<tr>${r.map((c) => `<td>${h(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+    rows = [];
+  };
+  for (const raw of String(text).split(String.fromCharCode(10))) {
+    const line = raw.trim();
+    if (line.startsWith("|") && line.endsWith("|") && line.length > 1) {
+      const cells = line.slice(1, -1).split("|").map((c) => c.trim());
+      if (!cells.every((c) => /^:?-+:?$/.test(c))) rows.push(cells);
+      continue;
+    }
+    flush();
+    if (!line) continue;
+    if (line.startsWith("## ")) out.push(`<h4>${h(line.slice(3))}</h4>`);
+    else out.push(`<p${/^[①②③④]/.test(line) ? ' class="choice-line"' : ""}>${h(line)}</p>`);
+  }
+  flush();
+  return out.join("");
+}
 function sheet(html) {
   if (!document.getElementById("modal").innerHTML) sheetTrigger = document.activeElement;
   document.getElementById("modal").innerHTML = `<div class="shade" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">${html.replace("<h3>", '<h3 id="sheet-title">')}</div></div>`;
@@ -180,17 +205,18 @@ function startPick() {
 
 /* ---------- 교재 원문: 답 확인 후, 필요한 페이지만 불러온다 ---------- */
 const textbookImages = new Map();
+const bookWord = (ref) => (ref.kind === "rule" ? "조문" : "교재");
 function textbookHtml(q) {
   if (!q.textbook?.length) return "";
-  return `<section class="textbook-evidence" aria-label="교재 근거"><h3>교재 근거</h3>${q.textbook.map((ref, i) => `<article class="book-ref"><p class="book-citation">${h(ref.book)} <b>${ref.page}쪽</b><small>PDF ${ref.pdfPage}쪽</small></p>${ref.summary ? `<p class="book-summary">${h(ref.summary)}</p>` : ""}<button class="text-link" data-act="textbook" data-q="${h(q.id)}" data-i="${i}" aria-expanded="false">교재 원문 보기 ${icon("book")}</button><div class="book-preview" hidden></div></article>`).join("")}</section>`;
+  return `<section class="textbook-evidence" aria-label="원문 근거"><h3>${q.textbook[0].kind === "rule" ? "조문 원문" : "교재 근거"}</h3>${q.textbook.map((ref, i) => `<article class="book-ref"><p class="book-citation">${h(ref.book)} <b>${ref.label ? h(ref.label) + " · " : ""}${ref.page}쪽</b><small>PDF ${ref.pdfPage}쪽</small></p>${ref.summary ? `<p class="book-summary">${h(ref.summary)}</p>` : ""}<button class="text-link" data-act="textbook" data-q="${h(q.id)}" data-i="${i}" aria-expanded="false">${bookWord(ref)} 원문 보기 ${icon("book")}</button><div class="book-preview" hidden></div></article>`).join("")}</section>`;
 }
 async function textbookImage(ref) {
-  if (!/^(system|diesel)-\d{3}$/.test(ref.asset)) throw new Error("Invalid textbook asset");
+  if (!/^(system|diesel|rule|detail|safety|mgmt|industry|emergency)-\d{3}$/.test(ref.asset)) throw new Error("Invalid textbook asset");
   if (!window.ENC) return `./data/textbook/pages/${ref.asset}.webp`;
   if (!textbookKey) throw new Error("Locked");
   if (textbookImages.has(ref.asset)) return textbookImages.get(ref.asset);
   const pending = (async () => {
-    const response = await fetch(`./textbook/${ref.asset}.enc?v=${encodeURIComponent(window.ENC.n)}`);
+    const response = await fetch(`./textbook/${ref.asset}.enc?v=${encodeURIComponent(textbookVersion)}`);
     if (!response.ok) throw new Error("Textbook unavailable");
     const bytes = new Uint8Array(await response.arrayBuffer());
     const decoded = await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes.slice(0, 12), additionalData: new TextEncoder().encode(ref.asset) }, textbookKey, bytes.slice(12));
@@ -225,22 +251,22 @@ async function openTextbook(button) {
   if (!preview.hidden) {
     preview.hidden = true;
     button.setAttribute("aria-expanded", "false");
-    button.innerHTML = `교재 원문 보기 ${icon("book")}`;
+    button.innerHTML = `${bookWord(ref)} 원문 보기 ${icon("book")}`;
     return;
   }
   preview.hidden = false;
-  preview.innerHTML = '<p class="hint" role="status">교재를 불러오는 중…</p>';
+  preview.innerHTML = '<p class="hint" role="status">원문을 불러오는 중…</p>';
   button.disabled = true;
   button.setAttribute("aria-expanded", "true");
   try {
     const url = await textbookImage(ref);
     if (!preview.isConnected) return;
     preview.innerHTML = `${textbookFigure(ref, url)}<button class="text-link" data-act="textbook-full" data-q="${h(q.id)}" data-i="${index}">페이지 전체 · 확대</button>`;
-    button.innerHTML = "교재 접기";
+    button.innerHTML = "원문 접기";
   } catch (error) {
     if (preview.isConnected) {
-      preview.innerHTML = '<p class="hint" role="alert">교재를 불러오지 못했습니다. 연결을 확인한 뒤 다시 열어 주세요.</p>';
-      button.innerHTML = "교재 닫기 · 다시 시도";
+      preview.innerHTML = '<p class="hint" role="alert">원문을 불러오지 못했습니다. 인터넷 연결을 확인하고, 계속 안 되면 화면을 새로고침해 주세요.</p>';
+      button.innerHTML = "닫기 · 다시 시도";
     }
   } finally {
     button.disabled = false;
@@ -252,7 +278,7 @@ async function fullTextbook(button) {
   try {
     const url = await textbookImage(ref);
     if (!button.isConnected) return;
-    sheet(`<h3>${h(ref.book)} · ${ref.page}쪽</h3><div class="book-toolbar"><span class="hint">PDF ${ref.pdfPage}쪽</span><button class="text-link" data-act="book-zoom" aria-pressed="false">확대</button><button class="btn" data-act="close">닫기</button></div><div class="book-page-scroll" tabindex="0" aria-label="교재 원문 스크롤">${textbookFigure(ref, url, true)}</div>`);
+    sheet(`<h3>${h(ref.book)} · ${ref.label ? h(ref.label) + " · " : ""}${ref.page}쪽</h3><div class="book-toolbar"><span class="hint">PDF ${ref.pdfPage}쪽</span><button class="text-link" data-act="book-zoom" aria-pressed="false">확대</button><button class="btn" data-act="close">닫기</button></div><div class="book-page-scroll" tabindex="0" aria-label="원문 스크롤">${textbookFigure(ref, url, true)}</div>`);
     document.querySelector(".sheet")?.classList.add("textbook-sheet");
   } catch (error) { toast("교재를 다시 열어 주세요."); }
 }
@@ -276,7 +302,7 @@ function solve() {
       .join("")}</div>`;
   }
   const answer = isShort(q) ? q.a : q.choices[q.answer - 1];
-  const ex = reveal ? `<div class="answer-content"><p class="verdict ${isShort(q) || a === q.answer ? "ok" : "bad"}" tabindex="-1" role="status">${isShort(q) ? "모범답안을 확인하세요" : a === q.answer ? "정답입니다" : "오답 · 정답은 " + MARKS[q.answer - 1]}</p><div class="ansbox"><span class="answer-label">${isShort(q) ? "모범답안" : "정답 " + MARKS[q.answer - 1]}</span><p>${h(answer)}</p></div><div class="explain"><div class="explain-heading"><b>해설</b><span class="explain-links">${q.tutor ? `<button class="text-link tutor-link" data-act="tutor">과외식 해설</button>` : ""}<button class="text-link" data-act="more">크게 보기 ${icon("arrow")}</button></span></div><p>${q.explain ? h(q.explain) : "해설이 없는 문제입니다."}</p></div>${q.src ? `<p class="source">근거 · ${h(q.src)}</p>` : ""}</div>` : `<div class="answer-placeholder">${icon("book")}<h2>정답과 해설</h2><p>${isShort(q) ? "답을 생각한 뒤 아래의<br>‘정답 보기’를 눌러 주세요." : "보기를 선택하면<br>정답과 해설이 여기에 나타납니다."}</p></div>`;
+  const ex = reveal ? `<div class="answer-content"><p class="verdict ${isShort(q) || a === q.answer ? "ok" : "bad"}" tabindex="-1" role="status">${isShort(q) ? "모범답안을 확인하세요" : a === q.answer ? "정답입니다" : "오답 · 정답은 " + MARKS[q.answer - 1]}</p><div class="ansbox"><span class="answer-label">${isShort(q) ? "모범답안" : "정답 " + MARKS[q.answer - 1]}</span><p>${h(answer)}</p></div><div class="explain"><div class="explain-heading"><b>해설</b><span class="explain-links">${q.tutor ? `<button class="text-link tutor-link" data-act="tutor">과외식 해설</button>` : ""}${q.textbook?.length ? `<button class="text-link tutor-link source-link" data-act="source">원문</button>` : ""}<button class="text-link" data-act="more">크게 보기 ${icon("arrow")}</button></span></div><p>${q.explain ? h(q.explain) : "해설이 없는 문제입니다."}</p></div>${q.src ? `<p class="source">근거 · ${h(q.src)}</p>` : ""}</div>` : `<div class="answer-placeholder">${icon("book")}<h2>정답과 해설</h2><p>${isShort(q) ? "답을 생각한 뒤 아래의<br>‘정답 보기’를 눌러 주세요." : "보기를 선택하면<br>정답과 해설이 여기에 나타납니다."}</p></div>`;
   const nextBtn = `<button class="btn pri wide" data-act="next">${last ? "학습 마치기" : "다음 문제"}${icon("arrow")}</button>`;
   const prevBtn = `<button class="btn" data-act="prev" ${S.i ? "" : "disabled"}>${icon("back")}이전</button>`;
   const foot = isShort(q) && !reveal ? `${prevBtn}<button class="btn pri wide" data-act="show">정답 보기 ${icon("check")}</button>` : `${prevBtn}${nextBtn}`;
@@ -389,9 +415,14 @@ document.addEventListener("click", (e) => {
   } else if (act === "more") {
     const q = BY_ID[S.ids[S.i]];
     sheet(`<h3>해설</h3><p class="full">${q.explain ? h(q.explain) : "해설이 없는 문제입니다."}</p>${q.src ? `<p class="hint">근거: ${h(q.src)}</p>` : ""}${textbookHtml(q)}<button class="btn pri" data-act="close">닫기</button>`);
+  } else if (act === "source") {
+    const q = BY_ID[S.ids[S.i]];
+    sheet(`<h3>원문</h3>${textbookHtml(q)}<button class="btn pri" data-act="close">닫기</button>`);
+    const first = document.querySelector(".sheet [data-act=textbook]");
+    if (first) openTextbook(first);
   } else if (act === "tutor") {
     const q = BY_ID[S.ids[S.i]];
-    sheet(`<h3>과외식 해설</h3><p class="full tutor">${h(q.tutor)}</p><h3 class="sub-h">간단 해설</h3><p class="full">${h(q.explain)}</p>${q.src ? `<p class="hint">근거: ${h(q.src)}</p>` : ""}<button class="btn pri" data-act="close">닫기</button>`);
+    sheet(`<h3>과외식 해설</h3><div class="tutor">${tutorHtml(q.tutor)}</div><button class="btn pri" data-act="close">닫기</button>`);
   } else if (act === "textbook") { openTextbook(t);
   } else if (act === "textbook-full") { fullTextbook(t);
   } else if (act === "book-zoom") {
@@ -488,7 +519,7 @@ if (typeof window !== "undefined" && window.addEventListener) window.addEventLis
 
 /* ---------- 시작: 평문 데이터 또는 비밀번호 잠금 해제 ---------- */
 const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-let textbookKey = null;
+let textbookKey = null, textbookVersion = "";
 async function decrypt(pw) {
   const enc = window.ENC;
   const km = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
@@ -496,7 +527,9 @@ async function decrypt(pw) {
   const buf = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(enc.n) }, key, b64(enc.c));
   const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"));
   const data = JSON.parse(await new Response(stream).text());
-  textbookKey = key;
+  // 원문 이미지 열쇠는 배포와 무관하게 고정이라, 사이트를 새로 올려도 열린다.
+  textbookKey = data.tk ? await crypto.subtle.importKey("raw", b64(data.tk), "AES-GCM", false, ["decrypt"]) : key;
+  textbookVersion = data.tv || enc.n;
   return data;
 }
 function start(data) {
