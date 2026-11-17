@@ -186,7 +186,7 @@ function learnHome() {
   const at = unitAt(unit), done = course.units.filter(unitDone).length;
   const no = course.units.indexOf(unit) + 1;
   root.innerHTML = `<div class="app app-home">
-  <header class="bar"><a class="brand" href="#" data-act="home">${icon("train")}<span>기관사 <b>공부방</b></span></a><button class="link" data-act="theory" ${THEORY.length ? "" : "hidden"}>${icon("book")}이론 보기</button>${window.ENC && savedPw() ? `<button class="link" data-act="lock" aria-label="저장된 비밀번호 지우고 잠그기">${icon("lock")}잠그기</button>` : ""}</header>
+  <header class="bar"><a class="brand" href="#" data-act="home">${icon("train")}<span>기관사 <b>공부방</b></span></a><button class="link" data-act="theory" ${THEORY.length ? "" : "hidden"}>${icon("book")}요약·이론</button>${window.ENC && savedPw() ? `<button class="link" data-act="lock" aria-label="저장된 비밀번호 지우고 잠그기">${icon("lock")}잠그기</button>` : ""}</header>
   <main id="app" tabindex="-1" class="stage home learn-home">
     ${modeSeg()}
     <section class="setup-card"><h2>과정 <small class="course-progress">${done} / ${course.units.length} 단원 완료</small></h2>
@@ -233,7 +233,7 @@ function home() {
   const n = p.n ? Math.min(p.n, pool.length) : pool.length;
   const resume = S && !S.unit ? `<button class="resume" data-act="resume"><span class="resume-copy"><b>이어서 풀기</b><small>${h(S.title)} · ${Math.min(S.i + 1, S.ids.length)} / ${S.ids.length}</small></span>${icon("arrow")}</button>` : "";
   root.innerHTML = `<div class="app app-home">
-  <header class="bar"><a class="brand" href="#" data-act="home">${icon("train")}<span>기관사 <b>공부방</b></span></a><button class="link" data-act="theory" ${THEORY.length ? "" : "hidden"}>${icon("book")}이론 보기</button>${window.ENC && savedPw() ? `<button class="link" data-act="lock" aria-label="저장된 비밀번호 지우고 잠그기">${icon("lock")}잠그기</button>` : ""}</header>
+  <header class="bar"><a class="brand" href="#" data-act="home">${icon("train")}<span>기관사 <b>공부방</b></span></a><button class="link" data-act="theory" ${THEORY.length ? "" : "hidden"}>${icon("book")}요약·이론</button>${window.ENC && savedPw() ? `<button class="link" data-act="lock" aria-label="저장된 비밀번호 지우고 잠그기">${icon("lock")}잠그기</button>` : ""}</header>
   <main id="app" tabindex="-1" class="stage home">
     ${modeSeg()}
     ${resume}
