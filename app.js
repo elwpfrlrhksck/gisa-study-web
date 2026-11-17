@@ -6,6 +6,7 @@
 let BANK = [];
 let THEORY = [];
 let BY_ID = {};
+let COURSES = []; // 학습 과정 [{id, name, units: [{id, title, intro, ids}]}]
 const MARKS = ["①", "②", "③", "④", "⑤"];
 const root = document.getElementById("root");
 const GROUPS = [
@@ -167,7 +168,61 @@ function seg(name, cur, opts) {
   const label = { grp: "문제 유형", subj: "과목", n: "문제 수", rand: "문제 순서" }[name];
   return `<div class="seg seg-${name}" role="group" aria-label="${label}">${opts.map(([v, l]) => `<button class="${String(cur) === String(v) ? "on" : ""}" aria-pressed="${String(cur) === String(v)}" data-act="set" data-k="${name}" data-v="${h(v)}">${h(l)}</button>`).join("")}</div>`;
 }
+/* ---------- 학습(커리큘럼) ---------- */
+const curMode = () => DB.mode || "learn";
+const modeSeg = () => (COURSES.length ? `<div class="seg mode-seg" role="group" aria-label="공부 방식">${[["learn", "학습 · 순서대로"], ["review", "복습 · 문제 풀이"]].map(([v, l]) => `<button class="${curMode() === v ? "on" : ""}" aria-pressed="${curMode() === v}" data-act="mode" data-v="${v}">${l}</button>`).join("")}</div>` : "");
+function learnState() {
+  DB.prog = DB.prog || {};
+  const course = COURSES.find((c) => c.id === (DB.learn && DB.learn.course)) || COURSES[0];
+  // 고른 단원이 없으면 아직 끝내지 않은 첫 단원
+  const unit = course.units.find((u) => u.id === (DB.learn && DB.learn.unit)) || course.units.find((u) => DB.prog[u.id] !== "done") || course.units[0];
+  DB.learn = { course: course.id, unit: unit.id };
+  return { course, unit };
+}
+const unitDone = (u) => !!DB.prog && DB.prog[u.id] === "done";
+const unitAt = (u) => (unitDone(u) ? 0 : Math.min(+((DB.prog || {})[u.id]) || 0, u.ids.length - 1));
+function learnHome() {
+  const { course, unit } = learnState();
+  const at = unitAt(unit), done = course.units.filter(unitDone).length;
+  const no = course.units.indexOf(unit) + 1;
+  root.innerHTML = `<div class="app app-home">
+  <header class="bar"><a class="brand" href="#" data-act="home">${icon("train")}<span>기관사 <b>공부방</b></span></a><button class="link" data-act="theory" ${THEORY.length ? "" : "hidden"}>${icon("book")}이론 보기</button>${window.ENC && savedPw() ? `<button class="link" data-act="lock" aria-label="저장된 비밀번호 지우고 잠그기">${icon("lock")}잠그기</button>` : ""}</header>
+  <main id="app" tabindex="-1" class="stage home learn-home">
+    ${modeSeg()}
+    <section class="setup-card"><h2>과정 <small class="course-progress">${done} / ${course.units.length} 단원 완료</small></h2>
+      <div class="seg" role="group" aria-label="과정">${COURSES.map((c) => `<button class="${c.id === course.id ? "on" : ""}" aria-pressed="${c.id === course.id}" data-act="course" data-v="${c.id}">${h(c.name)}</button>`).join("")}</div>
+      <div class="selection-row"><label for="unit-select">단원</label><select id="unit-select" data-learn="unit">${course.units.map((u, i) => `<option value="${u.id}" ${u.id === unit.id ? "selected" : ""}>${unitDone(u) ? "✓ " : unitAt(u) ? "▶ " : ""}${i + 1}. ${h(u.title)} (${u.ids.length})</option>`).join("")}</select></div>
+    </section>
+    <section class="setup-card unit-card"><h2>${no}단원 · ${h(unit.title)}</h2><p class="unit-intro">${h(unit.intro)}</p>
+      <p class="unit-how">문제를 순서대로 풀고, 답을 고르면 과외식 해설이 바로 열립니다. 모르는 문제는 찍고 해설로 배우면 됩니다.</p></section>
+  </main><footer class="home-foot"><p class="selection-summary">${h(course.name)} 과정 · ${no}단원<span>${unitDone(unit) ? "완료한 단원" : at ? `${at + 1}번째 문제부터` : `문제 ${unit.ids.length}개`}</span></p><button class="go" data-act="learn">${unitDone(unit) ? "이 단원 다시 학습" : at ? `이어서 학습 (${at + 1} / ${unit.ids.length})` : "학습 시작"}${icon("arrow")}</button></footer></div>`;
+}
+function startUnit() {
+  const { course, unit } = learnState();
+  const ids = unit.ids.filter((id) => BY_ID[id]);
+  if (!ids.length) return toast("이 단원에 문제가 없습니다");
+  if (unitDone(unit)) DB.prog[unit.id] = 0;
+  S = { ids, i: Math.min(unitAt(unit), ids.length - 1), ans: {}, title: `${course.name} ${course.units.indexOf(unit) + 1}단원 · ${unit.title}`, unit: unit.id };
+  save();
+  go("solve");
+}
+function nextUnit() {
+  const { course, unit } = learnState();
+  const next = course.units[course.units.indexOf(unit) + 1];
+  S = null;
+  if (next) DB.learn.unit = next.id;
+  save();
+  if (next) startUnit();
+  else go("home");
+}
+/* 학습 중에는 답을 확인하면 과외식 해설을 바로 연다. */
+function tutorSheet(q) {
+  const learning = S && S.unit;
+  const last = S && S.i >= S.ids.length - 1;
+  sheet(`<h3>과외식 해설</h3><div class="tutor">${tutorHtml(q.tutor)}</div>${q.textbook?.length ? `<button class="btn" data-act="source">${q.textbook[0].kind === "rule" ? "조문" : "교재"} 원문 보기</button>` : ""}${learning ? `<button class="btn pri" data-act="next">${last ? "단원 마치기" : "다음 문제"}</button><button class="btn" data-act="close">문제 다시 보기</button>` : `<button class="btn pri" data-act="close">닫기</button>`}`);
+}
 function home() {
+  if (COURSES.length && curMode() === "learn") return learnHome();
   const p = DB.pick;
   if (!GROUPS.some((g) => g[0] === p.grp)) p.grp = "past";
   const subs = subsOf(p.grp);
@@ -176,10 +231,11 @@ function home() {
   if (p.subj && !subjects.includes(p.subj)) p.subj = "";
   const pool = poolOf(p);
   const n = p.n ? Math.min(p.n, pool.length) : pool.length;
-  const resume = S ? `<button class="resume" data-act="resume"><span class="resume-copy"><b>이어서 풀기</b><small>${h(S.title)} · ${Math.min(S.i + 1, S.ids.length)} / ${S.ids.length}</small></span>${icon("arrow")}</button>` : "";
+  const resume = S && !S.unit ? `<button class="resume" data-act="resume"><span class="resume-copy"><b>이어서 풀기</b><small>${h(S.title)} · ${Math.min(S.i + 1, S.ids.length)} / ${S.ids.length}</small></span>${icon("arrow")}</button>` : "";
   root.innerHTML = `<div class="app app-home">
   <header class="bar"><a class="brand" href="#" data-act="home">${icon("train")}<span>기관사 <b>공부방</b></span></a><button class="link" data-act="theory" ${THEORY.length ? "" : "hidden"}>${icon("book")}이론 보기</button>${window.ENC && savedPw() ? `<button class="link" data-act="lock" aria-label="저장된 비밀번호 지우고 잠그기">${icon("lock")}잠그기</button>` : ""}</header>
   <main id="app" tabindex="-1" class="stage home">
+    ${modeSeg()}
     ${resume}
     <section class="setup-card"><h2>문제 선택</h2>${seg("grp", p.grp, GROUPS)}
       <div class="selection-row"><label for="sub-select">${p.grp === "past" ? "시험 회차" : p.grp === "books" ? "자료 선택" : p.grp === "short" ? "학습 범위" : "난이도"}</label><select id="sub-select" data-pick="sub">${[["", "전체"]].concat(subs.map((s) => [s, s])).map(([v, l]) => `<option value="${h(v)}" ${p.sub === v ? "selected" : ""}>${h(l)}</option>`).join("")}</select></div>
@@ -211,7 +267,7 @@ function textbookHtml(q) {
   return `<section class="textbook-evidence" aria-label="원문 근거"><h3>${q.textbook[0].kind === "rule" ? "조문 원문" : "교재 근거"}</h3>${q.textbook.map((ref, i) => `<article class="book-ref"><p class="book-citation">${h(ref.book)} <b>${ref.label ? h(ref.label) + " · " : ""}${ref.page}쪽</b><small>PDF ${ref.pdfPage}쪽</small></p>${ref.summary ? `<p class="book-summary">${h(ref.summary)}</p>` : ""}<button class="text-link" data-act="textbook" data-q="${h(q.id)}" data-i="${i}" aria-expanded="false">${bookWord(ref)} 원문 보기 ${icon("book")}</button><div class="book-preview" hidden></div></article>`).join("")}</section>`;
 }
 async function textbookImage(ref) {
-  if (!/^(system|diesel|rule|detail|safety|mgmt|industry|emergency)-\d{3}$/.test(ref.asset)) throw new Error("Invalid textbook asset");
+  if (!/^(system|diesel|rule|detail|safety|mgmt|industry|emergency|accident)-\d{3}$/.test(ref.asset)) throw new Error("Invalid textbook asset");
   if (!window.ENC) return `./data/textbook/pages/${ref.asset}.webp`;
   if (!textbookKey) throw new Error("Locked");
   if (textbookImages.has(ref.asset)) return textbookImages.get(ref.asset);
@@ -280,6 +336,11 @@ async function fullTextbook(button) {
     if (!button.isConnected) return;
     sheet(`<h3>${h(ref.book)} · ${ref.label ? h(ref.label) + " · " : ""}${ref.page}쪽</h3><div class="book-toolbar"><span class="hint">PDF ${ref.pdfPage}쪽</span><button class="text-link" data-act="book-zoom" aria-pressed="false">확대</button><button class="btn" data-act="close">닫기</button></div><div class="book-page-scroll" tabindex="0" aria-label="원문 스크롤">${textbookFigure(ref, url, true)}</div>`);
     document.querySelector(".sheet")?.classList.add("textbook-sheet");
+    // 휴대폰에서는 처음부터 키워서 보여 준다(손가락으로 위아래·좌우로 움직여 읽는다).
+    if (typeof window.matchMedia === "function" && window.matchMedia("(max-width:760px)").matches) {
+      document.querySelector(".textbook-sheet .book-full")?.classList.add("zoomed");
+      document.querySelector(".textbook-sheet [data-act=book-zoom]")?.setAttribute("aria-pressed", "true");
+    }
   } catch (error) { toast("교재를 다시 열어 주세요."); }
 }
 
@@ -323,11 +384,19 @@ function pick(i) {
   S.ans[q.id] = i;
   save();
   render();
+  if (S.unit && q.tutor) tutorSheet(q);
 }
 function move(d) {
   const n = S.i + d;
   if (n < 0) return;
-  if (n >= S.ids.length) return go("end");
+  if (S.unit) {
+    DB.prog = DB.prog || {};
+    if (DB.prog[S.unit] !== "done") DB.prog[S.unit] = n >= S.ids.length ? "done" : Math.max(n, +DB.prog[S.unit] || 0);
+  }
+  if (n >= S.ids.length) {
+    save();
+    return go("end");
+  }
   S.i = n;
   save();
   render();
@@ -335,6 +404,19 @@ function move(d) {
 
 /* ---------- 끝: 바로 다시 풀 수 있게 ---------- */
 function end() {
+  if (S.unit) {
+    const { course, unit } = learnState();
+    const next = course.units[course.units.indexOf(unit) + 1];
+    root.innerHTML = `<div class="app">
+  <header class="bar"><h1>${h(S.title)}</h1></header>
+  <main id="app" tabindex="-1" class="stage end">
+    <span class="end-mark">${icon("check")}</span><h1 class="done">단원을 마쳤어요.</h1>
+    ${next ? `<button class="go" data-act="nextUnit">다음 단원 · ${h(next.title)}</button>` : `<p class="hint">${h(course.name)} 과정의 마지막 단원입니다.</p>`}
+    <button class="go alt" data-act="reviewUnit">이 단원 문제 섞어서 복습</button>
+    <button class="go alt" data-act="homeEnd">단원 고르기</button>
+  </main></div>`;
+    return;
+  }
   root.innerHTML = `<div class="app">
   <header class="bar"><h1>${h(S.title)}</h1></header>
   <main id="app" tabindex="-1" class="stage end">
@@ -395,7 +477,18 @@ document.addEventListener("click", (e) => {
     save();
     render();
     [...document.querySelectorAll('[data-act="set"]')].find((el) => el.dataset.k === k && el.dataset.v === v)?.focus({ preventScroll: true });
-  } else if (act === "start" || act === "fresh") startPick();
+  } else if (act === "mode") {
+    DB.mode = t.dataset.v;
+    save();
+    render();
+  } else if (act === "course") {
+    DB.learn = { course: t.dataset.v };
+    save();
+    render();
+  } else if (act === "learn") startUnit();
+  else if (act === "nextUnit") nextUnit();
+  else if (act === "reviewUnit") startSet(shuffle(S.ids), "단원 복습");
+  else if (act === "start" || act === "fresh") startPick();
   else if (act === "resume") go(S.i >= S.ids.length ? "end" : "solve");
   else if (act === "theory") go("theory");
   else if (act === "lock") lockApp();
@@ -412,6 +505,7 @@ document.addEventListener("click", (e) => {
     S.ans[S.ids[S.i]] = 1;
     save();
     render();
+    if (S.unit && BY_ID[S.ids[S.i]].tutor) tutorSheet(BY_ID[S.ids[S.i]]);
   } else if (act === "more") {
     const q = BY_ID[S.ids[S.i]];
     sheet(`<h3>해설</h3><p class="full">${q.explain ? h(q.explain) : "해설이 없는 문제입니다."}</p>${q.src ? `<p class="hint">근거: ${h(q.src)}</p>` : ""}${textbookHtml(q)}<button class="btn pri" data-act="close">닫기</button>`);
@@ -421,8 +515,7 @@ document.addEventListener("click", (e) => {
     const first = document.querySelector(".sheet [data-act=textbook]");
     if (first) openTextbook(first);
   } else if (act === "tutor") {
-    const q = BY_ID[S.ids[S.i]];
-    sheet(`<h3>과외식 해설</h3><div class="tutor">${tutorHtml(q.tutor)}</div><button class="btn pri" data-act="close">닫기</button>`);
+    tutorSheet(BY_ID[S.ids[S.i]]);
   } else if (act === "textbook") { openTextbook(t);
   } else if (act === "textbook-full") { fullTextbook(t);
   } else if (act === "book-zoom") {
@@ -454,6 +547,13 @@ document.addEventListener("click", (e) => {
   }
 });
 document.addEventListener("change", (e) => {
+  if (e.target.dataset?.learn === "unit") {
+    DB.learn = { course: DB.learn.course, unit: e.target.value };
+    save();
+    render();
+    document.getElementById("unit-select")?.focus({ preventScroll: true });
+    return;
+  }
   if (e.target.dataset?.pick === "sub") {
     DB.pick.sub = e.target.value;
     save();
@@ -535,6 +635,7 @@ async function decrypt(pw) {
 function start(data) {
   BANK = Array.isArray(data) ? data : data.bank;
   THEORY = (Array.isArray(data) ? window.THEORY : data.theory) || [];
+  COURSES = (Array.isArray(data) ? window.COURSES : data.courses) || [];
   BY_ID = Object.fromEntries(BANK.map((q) => [q.id, q]));
   const s = DB.sess;
   S = s && s.ids && s.ids.every((id) => BY_ID[id]) ? s : null;
